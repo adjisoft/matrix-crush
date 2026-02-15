@@ -3,6 +3,7 @@ use std::collections::VecDeque;
 
 use crate::audio::AudioManager;
 use crate::effects::{BombEffect, FallingGem, Particle, ScreenShake, SweepEffect};
+use crate::level::LevelSession;
 use crate::matrix_match::gem::*;
 
 pub const GRID_WIDTH: usize = 8;
@@ -31,6 +32,12 @@ pub struct Board {
     pub last_match_count: u32,
     pub match_effect_timer: f32,
     pub special_gems_to_process: Vec<(usize, usize)>,
+    pub level_session: Option<LevelSession>,
+    pub level_mode: bool,
+    pub level_complete: bool,
+    pub level_failed: bool,
+    pub show_level_results: bool,
+    pub level_result: Option<crate::level::LevelResult>,
 }
 
 impl Board {
@@ -53,6 +60,12 @@ impl Board {
             last_match_count: 0,
             match_effect_timer: 0.0,
             special_gems_to_process: Vec::new(),
+            level_session: None,
+            level_mode: false,
+            level_complete: false,
+            level_failed: false,
+            show_level_results: false,
+            level_result: None,
         };
         board.initialize_grid();
         board
@@ -272,8 +285,17 @@ impl Board {
         pos2: (usize, usize),
         audio: &AudioManager,
     ) -> bool {
-        if self.is_animating {
+        if self.is_animating || self.level_complete || self.level_failed {
             return false;
+        }
+
+        if self.level_mode {
+            if let Some(session) = &mut self.level_session {
+                if !session.use_move() {
+                    self.level_failed = true;
+                    return false;
+                }
+            }
         }
 
         let temp = self.grid[pos1.1][pos1.0];
@@ -290,6 +312,12 @@ impl Board {
 
             self.create_error_effect(pos1, pos2);
             audio.play_sound("not_match");
+
+            if self.level_mode {
+                if let Some(session) = &mut self.level_session {
+                    session.moves_left += 1;
+                }
+            }
 
             false
         }
@@ -394,11 +422,24 @@ impl Board {
             }
             self.combo_timer = 2.0;
 
+            if self.level_mode {
+                if let Some(session) = &mut self.level_session {
+                    for &(x, y) in &matches_to_clear {
+                        session.collect_gem(self.grid[y][x]);
+                    }
+                }
+            }
+
             let base_score = match_count * 10;
             let combo_multiplier = 1.0 + (self.combo as f32 * 0.2).min(2.0);
             let total_score = (base_score as f32 * combo_multiplier) as u32;
 
             self.score += total_score;
+
+            if let Some(session) = &mut self.level_session {
+                session.add_score(total_score);
+            }
+
             self.last_match_count = match_count;
             self.match_effect_timer = 0.5;
 
@@ -419,6 +460,16 @@ impl Board {
 
             for (x, y) in matches_to_clear {
                 self.grid[y][x] = ' ';
+            }
+
+            if self.level_mode {
+                if let Some(session) = &self.level_session {
+                    let result = session.check_completion();
+                    if result.completed {
+                        self.level_complete = true;
+                        self.level_result = Some(result);
+                    }
+                }
             }
         }
 
@@ -455,6 +506,16 @@ impl Board {
     }
 
     pub fn update(&mut self, dt: f32, audio: &AudioManager) {
+        if self.level_mode {
+            if let Some(session) = &mut self.level_session {
+                session.update_time(dt);
+
+                if session.is_out_of_moves() || session.is_time_out() {
+                    self.level_failed = true;
+                }
+            }
+        }
+
         self.particles.retain_mut(|p| {
             p.update(dt);
             p.is_alive()
@@ -471,7 +532,6 @@ impl Board {
         });
 
         self.update_falling_gems(dt);
-
         self.screen_shake.update(dt);
 
         if self.combo_timer > 0.0 {
@@ -495,6 +555,10 @@ impl Board {
         let special_count = self.process_special_gems(audio);
         if special_count > 0 {
             self.apply_gravity_with_animation();
+
+            if let Some(session) = &mut self.level_session {
+                session.add_special();
+            }
         }
 
         if !self.is_animating {
@@ -507,6 +571,11 @@ impl Board {
                 if self.combo >= 5 {
                     audio.play_sound("explosion");
                 }
+
+                if let Some(session) = &mut self.level_session {
+                    session.update_combo(self.combo);
+                }
+
                 self.apply_gravity_with_animation();
             }
         }
@@ -528,41 +597,12 @@ impl Board {
                 let bg_color = Color::new(0.0, bg_intensity, 0.0, 1.0);
                 draw_rectangle(rect.x, rect.y, rect.w, rect.h, bg_color);
 
-                let border_color = if self.error_positions.contains(&(x, y)) {
-                    Color::new(1.0, 0.0, 0.0, 0.5)
-                } else if let Some((sx, sy)) = self.selected {
-                    if sx == x && sy == y {
-                        Color::new(0.0, 1.0, 0.0, 0.8)
-                    } else {
-                        Color::new(0.0, 0.5, 0.0, 0.3)
-                    }
-                } else {
-                    Color::new(0.0, 0.3, 0.0, 0.2)
-                };
-
+                let border_color = self.get_border_color(x, y);
                 draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2.0, border_color);
-
-                let gem = self.grid[y][x];
-                if gem == BOMB_GEM {
-                    draw_text(
-                        "X",
-                        rect.x + 5.0,
-                        rect.y + 15.0,
-                        12.0,
-                        Color::new(1.0, 0.0, 0.0, 0.8),
-                    );
-                } else if gem == SWEEP_GEM {
-                    draw_text(
-                        "V",
-                        rect.x + 5.0,
-                        rect.y + 15.0,
-                        12.0,
-                        Color::new(0.0, 1.0, 1.0, 0.8),
-                    );
-                }
             }
         }
 
+        // Draw effects
         for effect in &self.sweep_effects {
             effect.draw(shake_offset);
         }
@@ -575,6 +615,7 @@ impl Board {
             gem.draw(shake_offset);
         }
 
+        // Draw gems
         for y in 0..GRID_HEIGHT {
             for x in 0..GRID_WIDTH {
                 let has_falling = self
@@ -609,8 +650,20 @@ impl Board {
                             );
                         }
 
+                        // PERBAIKAN: Ganti emoji dengan karakter ASCII
+                        let gem_char = match gem {
+                            '💎' => 'O', // Ruby
+                            '💠' => '#', // Diamond/Sapphire
+                            '💚' => '@', // Emerald
+                            '💛' => '$', // Topaz/Gold
+                            '💜' => '%', // Amethyst
+                            '💣' => 'X', // Bomb (ganti dari emoji bom)
+                            '🌀' => '+', // Sweep (ganti dari emoji tornado)
+                            _ => gem,
+                        };
+
                         draw_text_ex(
-                            &gem.to_string(),
+                            &gem_char.to_string(),
                             rect.x + CELL_SIZE / 2.0 - 8.0,
                             rect.y + CELL_SIZE / 2.0 + 8.0,
                             TextParams {
@@ -628,6 +681,147 @@ impl Board {
             particle.draw(shake_offset);
         }
 
+        // Draw UI Panel (berbeda untuk level mode)
+        if self.level_mode {
+            self.draw_level_ui(language, shake_offset);
+        } else {
+            self.draw_classic_ui(language, shake_offset);
+        }
+
+        // Draw level complete/failed overlay
+        if self.level_complete {
+            self.draw_level_complete();
+        } else if self.level_failed {
+            self.draw_level_failed();
+        }
+    }
+
+    fn draw_level_ui(&self, language: &str, _shake_offset: Vec2) {
+        if let Some(session) = &self.level_session {
+            let panel_x = BOARD_OFFSET_X + GRID_WIDTH as f32 * CELL_SIZE + 30.0;
+            let panel_y = BOARD_OFFSET_Y;
+
+            // Panel background
+            draw_rectangle(
+                panel_x - 10.0,
+                panel_y - 10.0,
+                250.0,
+                400.0,
+                Color::new(0.0, 0.1, 0.0, 0.9),
+            );
+
+            // Level info
+            draw_text(
+                &format!("Level {}", session.level.id),
+                panel_x,
+                panel_y + 30.0,
+                24.0,
+                GREEN,
+            );
+
+            // Moves left
+            let moves_text = if language == "id" { "GERAKAN" } else { "MOVES" };
+            draw_text(moves_text, panel_x, panel_y + 70.0, 20.0, YELLOW);
+
+            let moves_color = if session.moves_left <= 3 {
+                RED
+            } else if session.moves_left <= 5 {
+                ORANGE
+            } else {
+                WHITE
+            };
+
+            draw_text(
+                &format!("{} / {}", session.moves_left, session.initial_moves),
+                panel_x,
+                panel_y + 100.0,
+                28.0,
+                moves_color,
+            );
+
+            // Score
+            draw_text("SCORE", panel_x, panel_y + 140.0, 20.0, LIGHTGRAY);
+            draw_text(
+                &format!("{}", self.score),
+                panel_x,
+                panel_y + 170.0,
+                24.0,
+                WHITE,
+            );
+
+            // Objectives
+            draw_text("OBJECTIVES:", panel_x, panel_y + 210.0, 18.0, CYAN);
+
+            let result = session.check_completion();
+            for (i, ((current, target), obj)) in result
+                .progress
+                .iter()
+                .zip(&session.level.objectives)
+                .enumerate()
+            {
+                let y = panel_y + 240.0 + i as f32 * 25.0;
+
+                let obj_text = match obj {
+                    crate::level::LevelObjective::Score(_) => {
+                        format!("Score: {}/{}", current, target)
+                    }
+                    crate::level::LevelObjective::CollectGems { gem_type, .. } => {
+                        // PERBAIKAN: Ganti emoji dengan karakter ASCII di UI
+                        let gem_display = match gem_type {
+                            '💎' => "O", // Ruby
+                            '💠' => "#", // Sapphire
+                            '💚' => "@", // Emerald
+                            '💛' => "$", // Topaz
+                            '💜' => "%", // Amethyst
+                            _ => "?",
+                        };
+                        format!(
+                            "{} {}: {}/{}",
+                            if language == "id" {
+                                "Kumpulkan"
+                            } else {
+                                "Collect"
+                            },
+                            gem_display,
+                            current,
+                            target
+                        )
+                    }
+                    crate::level::LevelObjective::ClearGems(_) => {
+                        format!("Clear: {}/{}", current, target)
+                    }
+                    crate::level::LevelObjective::Combo(_) => {
+                        format!("Combo: {}/{}", current, target)
+                    }
+                    crate::level::LevelObjective::SpecialGems(_) => {
+                        format!("Special: {}/{}", current, target)
+                    }
+                };
+
+                let color = if current >= target { GREEN } else { WHITE };
+                draw_text(&obj_text, panel_x + 10.0, y, 14.0, color);
+            }
+
+            // Progress bar
+            let progress = session.get_progress_percentage();
+            let bar_width = 220.0;
+            let bar_x = panel_x;
+            let bar_y = panel_y + 350.0;
+
+            draw_rectangle(bar_x, bar_y, bar_width, 15.0, DARKGRAY);
+            draw_rectangle(bar_x, bar_y, bar_width * progress, 15.0, GREEN);
+
+            draw_text(
+                &format!("{:.0}%", progress * 100.0),
+                bar_x + bar_width / 2.0 - 20.0,
+                bar_y - 5.0,
+                14.0,
+                WHITE,
+            );
+        }
+    }
+
+    fn draw_classic_ui(&self, language: &str, _shake_offset: Vec2) {
         let panel_x = BOARD_OFFSET_X + GRID_WIDTH as f32 * CELL_SIZE + 30.0;
         let panel_y = BOARD_OFFSET_Y;
 
@@ -691,6 +885,7 @@ impl Board {
             );
         }
 
+        // PERBAIKAN: Ganti emoji dengan karakter ASCII di penjelasan special
         draw_text("SPECIAL:", panel_x, panel_y + 220.0, 18.0, CYAN);
         draw_text(
             "X Bomb: 3x3",
@@ -700,7 +895,7 @@ impl Board {
             Color::new(1.0, 0.5, 0.5, 1.0),
         );
         draw_text(
-            "V Sweep: Row+Col",
+            "+ Sweep: Row+Col",
             panel_x,
             panel_y + 265.0,
             14.0,
@@ -731,6 +926,106 @@ impl Board {
                 Color::new(0.0, 1.0, 0.0, 0.7),
             );
         }
+    }
+
+    fn draw_level_complete(&self) {
+        // Semi-transparent overlay
+        draw_rectangle(
+            0.0,
+            0.0,
+            screen_width(),
+            screen_height(),
+            Color::new(0.0, 0.0, 0.0, 0.7),
+        );
+
+        draw_text(
+            "LEVEL COMPLETE!",
+            screen_width() / 2.0 - 150.0,
+            screen_height() / 2.0 - 100.0,
+            48.0,
+            GREEN,
+        );
+
+        if let Some(result) = &self.level_result {
+            // PERBAIKAN: Ganti emoji bintang dengan karakter ASCII
+            for i in 0..result.stars {
+                draw_text(
+                    "*", // Ganti dari "★" ke "*"
+                    screen_width() / 2.0 - 50.0 + i as f32 * 60.0,
+                    screen_height() / 2.0,
+                    50.0,
+                    YELLOW,
+                );
+            }
+
+            draw_text(
+                &format!("Score: {}", result.score),
+                screen_width() / 2.0 - 70.0,
+                screen_height() / 2.0 + 70.0,
+                24.0,
+                WHITE,
+            );
+
+            draw_text(
+                "Press SPACE to continue",
+                screen_width() / 2.0 - 130.0,
+                screen_height() / 2.0 + 120.0,
+                20.0,
+                LIGHTGRAY,
+            );
+        }
+    }
+
+    fn draw_level_failed(&self) {
+        draw_rectangle(
+            0.0,
+            0.0,
+            screen_width(),
+            screen_height(),
+            Color::new(0.0, 0.0, 0.0, 0.7),
+        );
+
+        draw_text(
+            "LEVEL FAILED",
+            screen_width() / 2.0 - 130.0,
+            screen_height() / 2.0 - 50.0,
+            48.0,
+            RED,
+        );
+
+        draw_text(
+            "Press R to retry | ESC for menu",
+            screen_width() / 2.0 - 180.0,
+            screen_height() / 2.0 + 50.0,
+            24.0,
+            WHITE,
+        );
+    }
+
+    pub fn start_level(&mut self, level: crate::level::Level) {
+        self.level_mode = true;
+        self.level_session = Some(crate::level::LevelSession::new(level));
+        self.level_complete = false;
+        self.level_failed = false;
+        self.show_level_results = false;
+        self.score = 0;
+        self.combo = 0;
+
+        self.initialize_grid();
+    }
+
+    fn get_border_color(&self, x: usize, y: usize) -> Color {
+        if let Some(selected) = self.selected {
+            if selected == (x, y) {
+                return CYAN;
+            }
+        }
+
+        if self.error_positions.contains(&(x, y)) && self.swap_error_timer > 0.0 {
+            return RED;
+        }
+
+        Color::new(0.3, 0.3, 0.3, 1.0)
     }
 
     pub fn handle_click(&mut self, mouse_x: f32, mouse_y: f32, audio: &AudioManager) -> bool {

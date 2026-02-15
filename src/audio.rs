@@ -5,9 +5,6 @@ use std::collections::HashMap;
 #[warn(dead_code)]
 pub struct AudioManager {
     sounds: HashMap<String, Sound>,
-    pub music_volume: f32,
-    pub sfx_volume: f32,
-    pub is_muted: bool,
 }
 
 impl AudioManager {
@@ -32,23 +29,12 @@ impl AudioManager {
 
         AudioManager {
             sounds,
-            music_volume: 0.5,
-            sfx_volume: 0.7,
-            is_muted: false,
         }
     }
 
     pub fn play_sound(&self, name: &str) {
-        if self.is_muted {
-            return;
-        }
-
         if let Some(sound) = self.sounds.get(name) {
             play_sound_once(sound);
         }
-    }
-
-    pub fn toggle_mute(&mut self) {
-        self.is_muted = !self.is_muted;
     }
 }
