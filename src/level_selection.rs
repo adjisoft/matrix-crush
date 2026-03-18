@@ -59,12 +59,10 @@ impl LevelSelection {
             }
         }
 
-        // Scroll dengan mouse wheel
         let scroll = mouse_wheel();
         self.scroll_offset += scroll.1 * 20.0;
         self.scroll_offset = self.scroll_offset.clamp(-300.0, 0.0);
 
-        // Navigasi halaman
         if is_key_pressed(KeyCode::Left) && self.page > 0 {
             self.page -= 1;
             self.scroll_offset = 0.0;

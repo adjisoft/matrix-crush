@@ -199,6 +199,9 @@ impl Game {
         if is_key_pressed(KeyCode::Escape) {
             self.state = GameState::Menu;
             self.save.update_high_score(self.board.score);
+            self.save.data.data_core += self.board.earned_data_core;
+            self.save.data.entropy += self.board.earned_entropy;
+            self.save.save();
             self.audio.play_sound("select");
         }
 
@@ -259,10 +262,18 @@ impl Game {
                     .level_manager
                     .complete_level(self.level_selection.selected_level, result.stars);
 
+                self.save.data.data_core += self.board.earned_data_core;
+                self.save.data.entropy += self.board.earned_entropy;
+                self.save.save();
+
                 self.state = GameState::LevelComplete;
                 self.audio.play_sound("select");
             }
         } else if self.board.level_failed {
+            self.save.data.data_core += self.board.earned_data_core;
+            self.save.data.entropy += self.board.earned_entropy;
+            self.save.save();
+
             self.state = GameState::LevelFailed;
             self.audio.play_sound("not_match");
         }
@@ -629,8 +640,11 @@ impl Game {
     }
 }
 
-#[macroquad::main("Matrix Crush")]
+#[macroquad::main("Matrix Crushed!")]
 async fn main() {
+    // Basic logging at startup
+    macroquad::logging::info!("Starting Matrix Crushed! Remastered Edition");
+    
     // Inisialisasi random seed
     rand::srand(miniquad::date::now() as u64);
 

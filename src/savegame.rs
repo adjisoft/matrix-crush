@@ -1,8 +1,15 @@
-use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+
+#[cfg(not(target_arch = "wasm32"))]
+use directories::ProjectDirs;
+#[cfg(not(target_arch = "wasm32"))]
 use std::fs;
+#[cfg(not(target_arch = "wasm32"))]
 use std::path::PathBuf;
+
+#[cfg(target_arch = "wasm32")]
+use web_sys::Storage;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct SaveData {
@@ -19,10 +26,23 @@ pub struct SaveData {
     pub level_stars: HashMap<u32, u32>,
     pub level_scores: HashMap<u32, u32>,
     pub save_slot: u32,
+    pub data_core: u32,
+    pub entropy: u32,
 }
 
 impl Default for SaveData {
     fn default() -> Self {
+        let last_played = {
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                chrono::Local::now().format("%Y-%m-%d").to_string()
+            }
+            #[cfg(target_arch = "wasm32")]
+            {
+                "1970-01-01".to_string()
+            }
+        };
+
         SaveData {
             high_score: 0,
             total_games: 0,
@@ -31,11 +51,13 @@ impl Default for SaveData {
             music_volume: 0.5,
             sfx_volume: 0.7,
             sound_enabled: true,
-            last_played: chrono::Local::now().format("%Y-%m-%d").to_string(),
+            last_played,
             max_unlocked_level: 1,
             level_stars: HashMap::new(),
             level_scores: HashMap::new(),
             save_slot: 1,
+            data_core: 0,
+            entropy: 0,
         }
     }
 }
@@ -49,13 +71,17 @@ impl SaveData {
 }
 
 pub struct SaveManager {
+    #[cfg(not(target_arch = "wasm32"))]
     save_dir: PathBuf,
+    #[cfg(target_arch = "wasm32")]
+    storage_key_prefix: String,
     pub data: SaveData, // Ubah jadi public
     current_slot: u32,  // Tetap private
 }
 
 impl SaveManager {
     pub fn new() -> Self {
+        #[cfg(not(target_arch = "wasm32"))]
         let save_dir =
             if let Some(proj_dirs) = ProjectDirs::from("com", "matrix_match", "ascii-match") {
                 proj_dirs.data_dir().to_path_buf()
@@ -63,10 +89,14 @@ impl SaveManager {
                 PathBuf::from("./save")
             };
 
+        #[cfg(not(target_arch = "wasm32"))]
         fs::create_dir_all(&save_dir).unwrap_or_default();
 
         let mut manager = SaveManager {
+            #[cfg(not(target_arch = "wasm32"))]
             save_dir,
+            #[cfg(target_arch = "wasm32")]
+            storage_key_prefix: "matrix_crushed_save".to_string(),
             data: SaveData::default(),
             current_slot: 1,
         };
@@ -80,10 +110,23 @@ impl SaveManager {
         self.current_slot
     }
 
+    #[cfg(target_arch = "wasm32")]
+    fn local_storage() -> Option<Storage> {
+        let window = web_sys::window()?;
+        window.local_storage().ok().flatten()
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    fn get_slot_key(&self, slot: u32) -> String {
+        format!("{}_slot_{}", self.storage_key_prefix, slot)
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
     fn get_slot_path(&self, slot: u32) -> PathBuf {
         self.save_dir.join(format!("save_slot_{}.ron", slot))
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn load_from_slot(&mut self, slot: u32) -> bool {
         let save_file = self.get_slot_path(slot);
 
@@ -102,6 +145,26 @@ impl SaveManager {
         false
     }
 
+    #[cfg(target_arch = "wasm32")]
+    pub fn load_from_slot(&mut self, slot: u32) -> bool {
+        let key = self.get_slot_key(slot);
+
+        if let Some(storage) = Self::local_storage() {
+            if let Ok(Some(content)) = storage.get_item(&key) {
+                if let Ok(data) = ron::from_str(&content) {
+                    self.data = data;
+                    self.current_slot = slot;
+                    return true;
+                }
+            }
+        }
+
+        self.data = SaveData::new(slot);
+        self.current_slot = slot;
+        false
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn save_to_slot(&self, slot: u32) -> bool {
         let save_file = self.get_slot_path(slot);
         if let Ok(content) = ron::to_string(&self.data) {
@@ -109,6 +172,17 @@ impl SaveManager {
         } else {
             false
         }
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub fn save_to_slot(&self, slot: u32) -> bool {
+        let key = self.get_slot_key(slot);
+        if let Ok(content) = ron::to_string(&self.data) {
+            if let Some(storage) = Self::local_storage() {
+                return storage.set_item(&key, &content).is_ok();
+            }
+        }
+        false
     }
 
     // Ganti nama dari save_current ke save
@@ -122,10 +196,28 @@ impl SaveManager {
         self.save();
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn get_slot_info(&self, slot: u32) -> Option<(u32, u32, u32)> {
         let save_file = self.get_slot_path(slot);
         if save_file.exists() {
             if let Ok(content) = fs::read_to_string(&save_file) {
+                if let Ok(data) = ron::from_str::<SaveData>(&content) {
+                    return Some((
+                        data.high_score,
+                        data.max_unlocked_level,
+                        data.level_stars.values().sum(),
+                    ));
+                }
+            }
+        }
+        None
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub fn get_slot_info(&self, slot: u32) -> Option<(u32, u32, u32)> {
+        let key = self.get_slot_key(slot);
+        if let Some(storage) = Self::local_storage() {
+            if let Ok(Some(content)) = storage.get_item(&key) {
                 if let Ok(data) = ron::from_str::<SaveData>(&content) {
                     return Some((
                         data.high_score,

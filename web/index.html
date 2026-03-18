@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Matrix Crushed — Web</title>
+    <style>
+      :root {
+        --bg: #050b05;
+        --grid: rgba(0, 255, 128, 0.08);
+        --neon: #22ff99;
+        --neon-soft: rgba(34, 255, 153, 0.55);
+        --panel: rgba(0, 20, 8, 0.75);
+      }
+      * {
+        box-sizing: border-box;
+        font-family: "Consolas", "Menlo", "Courier New", monospace;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--neon);
+        overflow: hidden;
+      }
+      #glcanvas {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+      }
+      #loader {
+        position: fixed;
+        inset: 0;
+        background:
+          linear-gradient(transparent 95%, rgba(34, 255, 153, 0.08) 96%) 0 0/100% 24px,
+          linear-gradient(90deg, transparent 95%, rgba(34, 255, 153, 0.08) 96%) 0 0/24px 100%,
+          radial-gradient(circle at 20% 20%, rgba(34, 255, 153, 0.08), transparent 45%),
+          var(--bg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+      }
+      #loader.hidden {
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.4s ease;
+      }
+      .panel {
+        width: min(680px, 90vw);
+        border: 1px solid var(--neon-soft);
+        background: var(--panel);
+        padding: 24px 28px;
+        box-shadow: 0 0 40px rgba(34, 255, 153, 0.15);
+        position: relative;
+      }
+      .panel::before {
+        content: "";
+        position: absolute;
+        inset: -2px;
+        border: 1px solid rgba(34, 255, 153, 0.2);
+        filter: blur(0.3px);
+        pointer-events: none;
+      }
+      .title {
+        font-size: 22px;
+        letter-spacing: 2px;
+        margin-bottom: 8px;
+      }
+      .subtitle {
+        font-size: 14px;
+        color: rgba(34, 255, 153, 0.7);
+        margin-bottom: 16px;
+      }
+      .progress {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: center;
+        gap: 16px;
+      }
+      .bar {
+        height: 10px;
+        border: 1px solid rgba(34, 255, 153, 0.35);
+        position: relative;
+        overflow: hidden;
+      }
+      .bar::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(90deg, rgba(34,255,153,0.2), rgba(34,255,153,0.8), rgba(34,255,153,0.2));
+        transform: translateX(-60%);
+        animation: sweep 1.6s infinite;
+      }
+      .matrix {
+        margin-top: 14px;
+        font-size: 12px;
+        color: rgba(34, 255, 153, 0.6);
+        letter-spacing: 1px;
+      }
+      .anon {
+        margin-top: 14px;
+        padding: 10px 12px;
+        border: 1px solid rgba(34, 255, 153, 0.25);
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+      .anon-face {
+        font-size: 20px;
+      }
+      .anon-text {
+        font-size: 13px;
+      }
+      @keyframes sweep {
+        0% { transform: translateX(-60%); }
+        50% { transform: translateX(60%); }
+        100% { transform: translateX(160%); }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="loader">
+      <div class="panel">
+        <div class="title">MATRIX CRUSHED</div>
+        <div class="subtitle">Booting grid... syncing anomalies</div>
+        <div class="progress">
+          <div class="bar"></div>
+          <div>LOADING</div>
+        </div>
+        <div class="matrix">01001101 01100001 01110100 01110010 01101001 01111000</div>
+        <div class="anon">
+          <div class="anon-face">(0_0)</div>
+          <div class="anon-text">Anonymous: Stabilizing the signal…</div>
+        </div>
+      </div>
+    </div>
+
+    <canvas id="glcanvas"></canvas>
+
+    <script type="module">
+      import init from "./matrix_crushed.js";
+
+      const loader = document.getElementById("loader");
+      const canvas = document.getElementById("glcanvas");
+      const resize = () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      };
+      window.addEventListener("resize", resize);
+      resize();
+
+      init()
+        .then(() => {
+          loader.classList.add("hidden");
+        })
+        .catch((err) => {
+          console.error(err);
+          loader.querySelector(".subtitle").textContent = "Boot failed. Check console.";
+        });
+    </script>
+  </body>
+</html>
