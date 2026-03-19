@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<translations>
+    <string key="menu_main">UTAMA</string>
+    <string key="menu_play">MAIN</string>
+    <string key="menu_story">MODE CERITA</string>
+    <string key="menu_classic">MODE KLASIK</string>
+    <string key="menu_settings">PENGATURAN</string>
+    <string key="menu_save_load">SIMPAN/MUAT</string>
+    <string key="menu_credits">KREDIT</string>
+    <string key="menu_exit">KELUAR</string>
+    <string key="menu_back">KEMBALI</string>
+    <string key="menu_language">BAHASA: ID</string>
+
+    <string key="settings_title">PENGATURAN</string>
+    <string key="settings_language">BAHASA</string>
+    <string key="settings_music">MUSIK</string>
+    <string key="settings_sfx">SFX</string>
+    <string key="settings_hint">KIRI/KANAN: Atur  |  ENTER: Ganti/Kembali  |  ESC: Kembali</string>
+
+    <string key="save_title">SIMPAN / MUAT</string>
+    <string key="save_info">Skor Tertinggi: {high_score} | Level: {level} | Bintang: {stars}</string>
+    <string key="save_save">SIMPAN PROGRESS</string>
+    <string key="save_load">MUAT PROGRESS</string>
+    <string key="save_reset">HAPUS PROGRESS</string>
+    <string key="save_back">ESC: Kembali</string>
+    
+    <string key="mode_title">PILIH MODE</string>
+
+    <string key="credits_title">=== KREDIT ===</string>
+    <string key="credits_dev">Pengembang: Rizky Adjie Raya Saputra</string>
+    <string key="credits_design">Desain: Rizky Adjie Raya Saputra dan EI AI</string>
+    <string key="credits_music">Musik: Nihilore</string>
+    <string key="credits_music_all">Semua musik latar oleh www.nihilore.com</string>
+    <string key="credits_music_ingame">Dalam game - Crux oleh Nihilore (www.nihilore.com)</string>
+    <string key="credits_music_main">Menu Utama - Anti Nostalgia oleh Nihilore (www.nihilore.com)</string>
+    <string key="credits_music_neural">Sektor Neural - Control oleh Nihilore (www.nihilore.com)</string>
+    <string key="credits_music_lab">Laboratorium Riset - Paradox oleh Nihilore (www.nihilore.com)</string>
+    <string key="credits_sfx">Sound FX: JSFXR</string>
+    <string key="credits_thanks">Terima kasih kepada:</string>
+    <string key="credits_rust">- Komunitas Rust</string>
+    <string key="credits_macroquad">- Macroquad Framework</string>
+    <string key="credits_players">- Para Player</string>
+    <string key="credits_return">Tekan ESC untuk kembali</string>
+
+    <string key="stats_text">Total Game: {games} | Total Match: {matches}</string>
+
+    <string key="game_title">MATRIX CRUSHED!</string>
+    <string key="game_subtitle">@adjisoft</string>
+
+    <string key="level_select_title">SEKTOR NEURAL</string>
+    <string key="level_select_act">BAB 1 : KEBANGKITAN</string>
+    <string key="level_select_status">SEKTOR: 25 | AKTIF: 5</string>
+    <string key="level_select_hint">KLIK NODE ATAU PORTAL  |  ESC: KEMBALI</string>
+    <string key="level_select_portal">PUSAT RISET TERBENGKALAI</string>
+    <string key="level_select_drift">PENYIMPANGAN SINYAL TERDETEKSI</string>
+    <string key="level_select_sector">SEKTOR {id}  {name}</string>
+    <string key="level_select_play">MASUK // MAIN  |  [L-CLICK]</string>
+    <string key="level_select_locked">STATUS -- TERKUNCI</string>
+    <string key="level_select_dev">DALAM PENGEMBANGAN</string>
+    <string key="level_select_coming">SEGERA HADIR // SEKTOR {id}</string>
+</translations>

@@ -4,16 +4,20 @@ OUT_DIR="${1:-docs}"
 
 rustup target add wasm32-unknown-unknown
 
-if ! command -v wasm-bindgen >/dev/null 2>&1; then
-  cargo install wasm-bindgen-cli --version 0.2.92
-fi
-
 cargo build --release --target wasm32-unknown-unknown
 
 mkdir -p "$OUT_DIR"
-wasm-bindgen --target web --no-typescript --out-dir "$OUT_DIR" target/wasm32-unknown-unknown/release/matrix_crushed.wasm
+cp target/wasm32-unknown-unknown/release/matrix_crushed.wasm "$OUT_DIR/matrix_crushed.wasm"
 
-cp web/index.html "$OUT_DIR/index.html"
+CARGO_HOME="${CARGO_HOME:-$HOME/.cargo}"
+MQ_JS_BUNDLE="$(find "$CARGO_HOME/registry/src" -name mq_js_bundle.js | head -n 1)"
+if [ -n "$MQ_JS_BUNDLE" ]; then
+  cp "$MQ_JS_BUNDLE" "$OUT_DIR/mq_js_bundle.js"
+fi
+
+if [ -f web/index.html ]; then
+  cp web/index.html "$OUT_DIR/index.html"
+fi
 if [ -d assets ]; then
   cp -r assets "$OUT_DIR/assets"
 fi

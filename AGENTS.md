@@ -1,327 +1,294 @@
-# Matrix Crushed! (Remaster Upgrade)
+## 🎯 TUJUAN UTAMA
 
-## 🎯 OBJECTIVE
+Refactor struktur proyek agar:
 
-Upgrade game lama **Matrix Crush** menjadi **Matrix Crushed! (Remastered Edition)** dengan:
-
-* Visual modern (particle, glitch effect)
-* Story Mode (25 level + branching)
-* Endless Mode
-* Power-up system baru
-* Currency & research tree
-* Bug fixes & UI improvements
-
-⚠️ PRIORITY:
-
-> Deliver **playable build secepat mungkin**, lalu iterate.
+* Konsisten dan modular
+* Mudah dipahami dan dikembangkan
+* File tidak terlalu besar (≤ 500 LOC ideal)
+* Tidak mengubah gameplay, logic, atau behavior
 
 ---
 
-## 🧱 EXISTING STRUCTURE (DO NOT BREAK)
+## 🧱 ARSITEKTUR WAJIB
+
+Gunakan 3 layer utama:
+
+### 1. CORE (opsional)
+
+Reusable systems (audio, save, dll)
+
+### 2. GAME (LOGIC MURNI)
+
+Tidak boleh tergantung UI / rendering
+
+### 3. APP (SCENES / UI)
+
+Menangani:
+
+* rendering
+* input
+* transisi scene
+
+---
+
+## 📂 STRUKTUR TARGET
 
 ```
 src/
-│   audio.rs
-│   level.rs
-│   level_selection.rs
-│   main.rs
-│   savegame.rs
+├── main.rs
+├── bootstrap.rs
+├── app.rs
 │
-├── effects/
-├── layout/
-│   └── board/
-└── matrix_match/
+├── scenes/
+│   ├── menu/
+│   ├── gameplay/
+│   └── story/
+│
+├── systems/
+│   ├── audio.rs
+│   ├── save.rs
+│   ├── localization.rs
+│   └── effects.rs
+│
+game/
+├── board/
+├── entities/
+├── progression/
+└── story/
 ```
 
-👉 Gunakan struktur ini sebagai base, **hindari rewrite total**.
+---
+
+## 🔒 ATURAN KERAS (MANDATORY)
+
+### 1. ❌ DILARANG MENGUBAH GAMEPLAY
+
+* Tidak boleh mengubah:
+
+  * mekanik match
+  * damage / score
+  * level logic
+* Hanya refactor struktur & organisasi kode
 
 ---
 
-## ⚙️ GLOBAL RULES
+### 2. 📏 BATAS UKURAN FILE
 
-* Gunakan Rust + Macroquad
-* Jangan overengineering
-* Semua fitur harus:
+| Tipe File | Maksimal             |
+| --------- | -------------------- |
+| Normal    | 300–500 LOC          |
+| Kompleks  | 700 LOC (hard limit) |
 
-  * modular
-  * data-driven (prefer JSON/XML-like struct)
-* Gunakan naming baru:
-
-  * Bomb Gem → X Bomb
-  * Sweep Gem → V Sweep
+Jika melebihi:
+➡️ WAJIB dipecah
 
 ---
 
-## 🚀 PHASE 1 — CRITICAL FIX & FOUNDATION
+### 3. 🧩 SINGLE RESPONSIBILITY
 
-### 🐞 Bug Fix
+Setiap file hanya boleh:
 
-* Fix power gem auto-trigger saat start:
+* 1 tanggung jawab utama
 
-  * validasi state awal = inactive
-  * reset state saat board generate
+Contoh:
 
-### 🧼 Cleanup
+* ❌ `level_selection.rs` (UI + logic + state)
+* ✅ pecah jadi:
 
-* Rapikan module:
-
-  * pisahkan logic vs render
-* Tambahkan logging sederhana
-
----
-
-## 🎨 PHASE 2 — VISUAL SYSTEM
-
-### ✨ Particle System (effects/particles.rs)
-
-Implement:
-
-* Explosion effect
-* Combo streak glow
-* Power activation
-* Glitch distortion
-
-Requirements:
-
-* Gunakan pooling (no allocation tiap frame)
-* Bisa dipanggil dari board logic
+  * `ui.rs`
+  * `state.rs`
+  * `input.rs`
 
 ---
 
-### ⚡ Screen Effects (effects/)
+### 4. 🚫 DILARANG CAMPUR LAYER
 
-Tambahkan:
-
-* screen shake (sudah ada → improve)
-* glitch shader (simple)
-* flash effect saat combo tinggi
+| Layer   | Boleh | Tidak boleh |
+| ------- | ----- | ----------- |
+| game    | logic | rendering   |
+| scenes  | UI    | core logic  |
+| systems | util  | gameplay    |
 
 ---
 
-## 🧩 PHASE 3 — CORE GAME EXPANSION
+## 🔄 STRATEGI REFACTOR
 
-### 💣 Power System Upgrade (matrix_match/gem.rs)
+### STEP 1 — Pindahkan Logic ke `game/`
 
-Tambahkan:
+Contoh:
 
-* Glitch Bomb
-* Antimatter Bomb
-* Void Bomb (secret)
+* `matrix_match/` → `game/board/`
+* `level.rs` → `game/progression/`
 
-Refactor:
+---
 
-* gunakan enum:
+### STEP 2 — Ubah `layout/` → `scenes/`
+
+Mapping:
+
+| Lama                | Baru                     |
+| ------------------- | ------------------------ |
+| layout/main_menu.rs | scenes/menu/main_menu.rs |
+| layout/board        | scenes/gameplay          |
+
+---
+
+### STEP 3 — Pecah File Besar
+
+#### Contoh: board logic
+
+```
+board/
+├── matcher.rs
+├── resolver.rs
+├── cascade.rs
+└── spawn.rs
+```
+
+---
+
+### STEP 4 — Buat `systems/`
+
+Semua util masuk sini:
+
+* audio
+* savegame
+* i18n
+* effects global
+
+---
+
+### STEP 5 — Sederhanakan `main.rs`
 
 ```rust
-enum PowerType {
-    XBomb,
-    VSweep,
-    GlitchBomb,
-    AntimatterBomb,
-    VoidBomb,
+fn main() {
+    bootstrap::run();
 }
 ```
 
 ---
 
-## 💰 PHASE 4 — CURRENCY SYSTEM
+## 🧠 POLA CODING WAJIB
 
-Tambahkan:
+### 1. STATE TERPISAH
 
 ```rust
-struct Currency {
-    data_core: u32,
-    entropy: u32,
+struct LevelSelectState {
+    selected: usize,
 }
 ```
 
-Logic:
-
-* Data Core → dari match biasa
-* Entropy → dari combo tinggi / glitch event
-
-Integrasi ke:
-
-* savegame.rs
-* reward system
-
 ---
 
-## 🌳 PHASE 5 — RESEARCH TREE
-
-Buat module baru:
-
-```
-src/research/
-    mod.rs
-    tree.rs
-```
-
-Fitur:
-
-* unlock power baru
-* upgrade multiplier
-* cost DT + Entropy
-
----
-
-## 📖 PHASE 6 — STORY MODE (IMPORTANT)
-
-Buat module baru:
-
-```
-src/story/
-    mod.rs
-    dialogue.rs
-    runner.rs
-```
-
-### Format data:
-
-Gunakan struktur sederhana:
+### 2. UI HANYA RENDER
 
 ```rust
-struct Dialogue {
-    text: String,
-    choices: Vec<Choice>,
-}
+fn render(state: &State) {}
 ```
-
-### Implement:
-
-* 25 level story
-* branching choice
-* 3 ending:
-
-  * Stability
-  * Glitch
-  * Void
-
-### Visual:
-
-* gunakan ASCII face:
-
-  * (0_0)
-  * (x_x)
-  * (   )
 
 ---
 
-## ♾️ PHASE 7 — ENDLESS MODE
+### 3. LOGIC PURE FUNCTION
 
-Unlock condition:
-
-* selesai story
-
-Fitur:
-
-* scaling difficulty
-* random power spawn
-* entropy farming
+```rust
+fn match_tiles(board: &Board) -> Matches
+```
 
 ---
 
-## ⚔️ PHASE 8 — MATCH BATTLE
+## 🧹 CLEANUP WAJIB
 
-Tambahkan mode baru:
+### 1. HAPUS DUPLIKASI ASSET
+
+❌ DILARANG:
 
 ```
-src/battle/
+assets/
+games/.../assets/
 ```
 
-Fitur:
+✅ GUNAKAN:
 
-* player vs AI
-* combo → damage
-* basic AI logic
+```
+assets/ (single source of truth)
+```
 
 ---
 
-## 🧩 PHASE 9 — UI IMPROVEMENT
+### 2. NAMA FILE HARUS JELAS
 
-Perbaiki:
+| Buruk    | Baik       |
+| -------- | ---------- |
+| logic.rs | matcher.rs |
+| utils.rs | save.rs    |
+| stuff.rs | audio.rs   |
 
-* text rusak (UTF-8)
-* layout scaling
-* button clarity
+---
+
+### 3. MOD.RS HARUS MINIMAL
+
+Hanya re-export:
+
+```rust
+pub mod matcher;
+pub mod resolver;
+```
+
+---
+
+## ⚙️ BUILD OPTIMIZATION (WAJIB)
 
 Tambahkan:
 
-* currency display
-* research tree UI
-* story dialogue UI
+```toml
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+```
 
 ---
 
-## 🔄 PHASE 10 — RENAMING
+## 🧪 VALIDASI SETELAH REFACTOR
 
-Update seluruh code:
+Agent WAJIB memastikan:
 
-* Bomb → X Bomb
-* Sweep → V Sweep
-* Game title → Matrix Crushed!
-
----
-
-## 🧪 PHASE 11 — TESTING
-
-Tambahkan:
-
-* debug tools:
-
-  * spawn power
-  * skip level
-* basic assertions
+* [ ] Game tetap bisa dijalankan
+* [ ] Tidak ada perubahan gameplay
+* [ ] Tidak ada panic/error baru
+* [ ] Semua module terhubung benar
+* [ ] Tidak ada file > 700 LOC
 
 ---
 
-## 🧠 AI EXECUTION STRATEGY
+## 🚀 GOAL AKHIR
 
-Kerjakan berurutan:
+Setelah refactor:
 
-1. Fix bug + stabilize
-2. Tambah particle & efek
-3. Refactor power system
-4. Tambah currency
-5. Implement story (minimal dulu)
-6. Endless mode
-7. Polish UI
+* Struktur mudah dipahami dalam < 5 menit
+* AI agent bisa navigasi tanpa kebingungan
+* Mudah ditambah:
 
-⚠️ Jangan implement semua sekaligus.
+  * level baru
+  * UI baru
+  * fitur baru
 
 ---
 
-## ✅ DEFINITION OF DONE
+## 🧭 PRIORITAS EKSEKUSI
 
-Game dianggap selesai jika:
-
-* Bisa dimainkan dari start → story → ending
-* Endless mode unlock
-* Semua power bekerja
-* Tidak ada crash
-* Visual terasa “hidup”
+1. Pecah file besar
+2. Pisahkan game logic
+3. Rapikan scenes
+4. Bersihkan assets
+5. Optimasi build
 
 ---
 
-## 🧩 OPTIONAL (IF TIME)
+## ⚠️ CATATAN
 
-* glitch event system
-* achievement system
-* shader lebih advanced
-
----
-
-## 💬 FINAL NOTE
-
-Fokus:
-
-> “Make it playable first, perfect later.”
-
-Jika ragu:
-
-* pilih solusi paling sederhana
-* hindari abstraction berlebihan
+* Refactor ≠ rewrite
+* Jangan over-engineering
+* Fokus ke keterbacaan & konsistensi
 
 ---
-
-END.

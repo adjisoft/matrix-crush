@@ -42,7 +42,7 @@
 
 * [ ] Fix bug:
 
-  * ❌ Power gems aktif otomatis saat start
+  * ✔️ Power gems aktif otomatis saat start [FIXED]
   * ✔️ Validasi:
 
     * [ ] Check initial state = `inactive`
@@ -146,7 +146,7 @@
 * [ ] Tambahkan:
 
   * **Data Core (DT)** → main currency
-  * **Glitchy Entropy** → rare currency
+  * **Glitch Matter** → rare currency
 
 * [ ] Drop logic:
 

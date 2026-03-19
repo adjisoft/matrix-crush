@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<translations>
+    <string key="menu_main">MAIN</string>
+    <string key="menu_play">PLAY</string>
+    <string key="menu_story">STORY MODE</string>
+    <string key="menu_classic">CLASSIC MODE</string>
+    <string key="menu_settings">SETTINGS</string>
+    <string key="menu_save_load">SAVE/LOAD</string>
+    <string key="menu_credits">CREDITS</string>
+    <string key="menu_exit">EXIT</string>
+    <string key="menu_back">BACK</string>
+    <string key="menu_language">LANGUAGE: EN</string>
+
+    <string key="settings_title">SETTINGS</string>
+    <string key="settings_language">LANGUAGE</string>
+    <string key="settings_music">MUSIC</string>
+    <string key="settings_sfx">SFX</string>
+    <string key="settings_hint">LEFT/RIGHT: Adjust  |  ENTER: Toggle/Back  |  ESC: Back</string>
+
+    <string key="save_title">SAVE / LOAD</string>
+    <string key="save_info">High Score: {high_score} | Level: {level} | Stars: {stars}</string>
+    <string key="save_save">SAVE PROGRESS</string>
+    <string key="save_load">LOAD PROGRESS</string>
+    <string key="save_reset">RESET PROGRESS</string>
+    <string key="save_back">ESC: Back</string>
+    
+    <string key="mode_title">SELECT MODE</string>
+
+    <string key="credits_title">=== CREDITS ===</string>
+    <string key="credits_dev">Developer: Rizky Adjie Raya Saputra</string>
+    <string key="credits_design">Design: Rizky Adjie Raya Saputra &amp; EI AI</string>
+    <string key="credits_music">Music: Nihilore</string>
+    <string key="credits_music_all">All bg music by www.nihilore.com</string>
+    <string key="credits_music_ingame">In game - Crux by Nihilore (www.nihilore.com)</string>
+    <string key="credits_music_main">Main Menu - Anti Nostalgia by Nihilore (www.nihilore.com)</string>
+    <string key="credits_music_neural">Neural Sectors - Control by Nihilore (www.nihilore.com)</string>
+    <string key="credits_music_lab">Research laboratory - Paradox by Nihilore (www.nihilore.com)</string>
+    <string key="credits_sfx">Sound FX: JSFXR</string>
+    <string key="credits_thanks">Special Thanks to:</string>
+    <string key="credits_rust">- Rust Community</string>
+    <string key="credits_macroquad">- Macroquad Framework</string>
+    <string key="credits_players">- All Players</string>
+    <string key="credits_return">Press ESC to return</string>
+
+    <string key="stats_text">Total Games: {games} | Total Matches: {matches}</string>
+
+    <string key="game_title">MATRIX CRUSHED!</string>
+    <string key="game_subtitle">@adjisoft</string>
+
+    <string key="level_select_title">NEURAL SECTORS</string>
+    <string key="level_select_act">ACT 1 : AWAKENING</string>
+    <string key="level_select_status">SECTORS: 25 | ACTIVE: 5</string>
+    <string key="level_select_hint">CLICK NODE OR PORTAL  |  ESC: BACK</string>
+    <string key="level_select_portal">ABANDONED RESEARCH CENTER</string>
+    <string key="level_select_drift">SIGNAL DRIFT DETECTED</string>
+    <string key="level_select_sector">SECTOR {id}  {name}</string>
+    <string key="level_select_play">ENTER // PLAY  |  [L-CLICK]</string>
+    <string key="level_select_locked">STATUS -- LOCKED</string>
+    <string key="level_select_dev">IN DEVELOPMENT</string>
+    <string key="level_select_coming">COMING SOON // SECTOR {id}</string>
+</translations>

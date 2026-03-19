@@ -26,6 +26,8 @@
         display: block;
         width: 100vw;
         height: 100vh;
+        outline: none;
+        touch-action: none;
       }
       #loader {
         position: fixed;
@@ -135,13 +137,15 @@
       </div>
     </div>
 
-    <canvas id="glcanvas"></canvas>
+    <canvas id="glcanvas" tabindex="0"></canvas>
 
     <script type="module">
       import init from "./matrix_crushed.js";
 
       const loader = document.getElementById("loader");
       const canvas = document.getElementById("glcanvas");
+      canvas.addEventListener("click", () => canvas.focus());
+      setTimeout(() => canvas.focus(), 1000);
       const resize = () => {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;

@@ -26,6 +26,8 @@
         display: block;
         width: 100vw;
         height: 100vh;
+        outline: none;
+        touch-action: none;
       }
       #loader {
         position: fixed;
@@ -121,7 +123,7 @@
   <body>
     <div id="loader">
       <div class="panel">
-        <div class="title">MATRIX CRUSHED</div>
+        <div class="title">MATRIX CRUSHED!</div>
         <div class="subtitle">Booting grid... syncing anomalies</div>
         <div class="progress">
           <div class="bar"></div>
@@ -135,28 +137,32 @@
       </div>
     </div>
 
-    <canvas id="glcanvas"></canvas>
+    <canvas id="glcanvas" tabindex="0"></canvas>
 
-    <script type="module">
-      import init from "./matrix_crushed.js";
-
+    <script src="./mq_js_bundle.js"></script>
+    <script>
       const loader = document.getElementById("loader");
-      const canvas = document.getElementById("glcanvas");
-      const resize = () => {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+      const gameCanvas = document.getElementById("glcanvas");
+      gameCanvas.addEventListener("click", () => gameCanvas.focus());
+      setTimeout(() => gameCanvas.focus(), 1000);
+      const resizeCanvas = () => {
+        gameCanvas.width = window.innerWidth;
+        gameCanvas.height = window.innerHeight;
       };
-      window.addEventListener("resize", resize);
-      resize();
+      window.addEventListener("resize", resizeCanvas);
+      resizeCanvas();
 
-      init()
-        .then(() => {
-          loader.classList.add("hidden");
-        })
-        .catch((err) => {
+      if (typeof load !== "function") {
+        loader.querySelector(".subtitle").textContent = "Loader JS missing (mq_js_bundle.js).";
+      } else {
+        try {
+          load("matrix_crushed.wasm");
+          setTimeout(() => loader.classList.add("hidden"), 800);
+        } catch (err) {
           console.error(err);
           loader.querySelector(".subtitle").textContent = "Boot failed. Check console.";
-        });
+        }
+      }
     </script>
   </body>
 </html>
